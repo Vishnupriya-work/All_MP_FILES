@@ -1,0 +1,10 @@
+select mobile as PHONE_NUMBER, 
+
+case when status = "USER_QUALIFIED" and firm_name is null then "Need to add business details" 
+when status = "USER_QUALIFIED" and bank_statement_status = "NOT_UPLOADED" then "Need to add banking details" 
+when status = "USER_QUALIFIED" and bank_statement_status = "FAILED" then "Banking details failed" 
+when status = "USER_QUALIFIED" and bank_statement_status = "COMPLETED" then loan_status else status end as UPDATED_STATUS, 
+user_created_at, user_updated_at, status, loan_status, firm_name, email, pincode, bank_statement_status,
+ bank_statement_failure_reason, sourced_by, agent_code, bank_holder_name, bank_account_type, bureau_last_updated_at, 
+ experian_score, experian_status, cibil_score, cibil_status from asp_playground.mp_iifl_userstatus_1 
+where id in (select max(id) from asp_playground.mp_iifl_userstatus_1 group by mobile); 
