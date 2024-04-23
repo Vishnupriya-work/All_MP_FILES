@@ -1,3 +1,41 @@
+
+SELECT 
+    date(applicationdatedaily),
+    COUNT(*) AS phone_entered,
+    COUNT(CASE WHEN mobilenumber IS NOT NULL AND loanstatus != 'loan_suspended' THEN mobilenumber END) AS loan_application_started,
+    COUNT(CASE WHEN loanstatus not IN ('loan_suspended','additional_demog_details', 'demog_details') THEN mobilenumber END) AS added_demog_details,
+    COUNT(CASE WHEN loanstatus NOT IN ('loan_suspended','age_rejected', 'dedupe_rejected', 'income_rejected', 'pan_rejected', 'pincode_rejected') THEN mobilenumber END) AS prospect_approved_stage1,
+    COUNT(CASE WHEN loanstatus NOT IN ('loan_suspended',
+    'age_rejected', 'dedupe_rejected', 'income_rejected', 'pan_rejected', 'pincode_rejected','pan_failed', 'pan_rejected') THEN mobilenumber END) AS PAN_approved,
+     COUNT(CASE WHEN leaddate IS NOT NULL THEN mobilenumber END) AS bureau_success,
+     -- COUNT(CASE WHEN leaddate IS NOT NULL and loanstatus NOT IN ('loan_suspended',
+--     'age_rejected', 'dedupe_rejected', 'income_rejected', 'pan_rejected', 'pincode_rejected','pan_failed', 'pan_rejected',
+--     'bureau_questionnaire_pending','bureau_initiated', 'bureau_otp_pending', 'bureau_api_failed','bureau_questionnaire_rejected',
+--     'policy_rejected','policy_review') THEN mobilenumber END) AS policy_approved,
+    COUNT(CASE WHEN leaddate IS NOT NULL and loanstatus NOT IN ('loan_suspended',
+    'policy_rejected','policy_review') THEN mobilenumber END) AS policy_approved,
+     COUNT(CASE WHEN logindate IS NOT NULL THEN mobilenumber END) AS final_offer_shown,
+    -- COUNT(CASE WHEN mobilenumber IS NOT NULL AND loanstatus in ('tentative_offer_accepted', 'disbursal_success') THEN mobilenumber END) AS offer_accepted,
+     COUNT(CASE WHEN mobilenumber IS NOT NULL AND loanstatus = 'disbursal_success' THEN mobilenumber END) AS disbursal_success
+     
+FROM asp_playground.mp_prefr_userstatus_1
+WHERE id IN (SELECT MAX(id) FROM asp_playground.mp_prefr_userstatus_1 GROUP BY mobilenumber)
+group by 1
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 SELECT 
     date(applicationdatedaily),
     COUNT(*) AS phone_entered,
