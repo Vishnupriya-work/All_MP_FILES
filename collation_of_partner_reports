@@ -1,0 +1,22 @@
+create table asp_playground.asp_user_partnership_phone as
+select a.*, b.phone_number
+from asp_user_partnership a
+left join user b
+on a.user_id = b.id;
+
+drop table if exists asp_playground.users_in_partner_report;
+create table asp_playground.users_in_partner_report as
+select a.*, b.id as user_id from 
+(select phone_number, product_name from asp_playground.mp_after_webflow_v2 
+union all 
+select phone_number, partner as product_name from asp_playground.asp_user_partnership_phone
+union all
+select mobilenumber as phone_number, 'prefr' as partner from asp_playground.mp_prefr_userstatus_1
+where id in (select max(id) from  asp_playground.mp_prefr_userstatus_1 group by mobilenumber)
+union all
+select mobile as phone_number, 'iifl' as partner from asp_playground.mp_iifl_userstatus_1
+where id in (select max(id) from  asp_playground.mp_iifl_userstatus_1 group by mobile)
+) a
+left join
+user b
+on a.phone_number = b.phone_number ;
