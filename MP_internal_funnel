@@ -22,7 +22,7 @@ count(case when  e.user_id is not null and screen_status = 8 then a.user_id end)
 count(case when  e.user_id is not null and screen_status = 9 then a.user_id end) as  users_Approved_in_offer_screen,
 count(case when g.products_redirected is not null or g.products_viewed is not null then a.user_id end) as product_info_viewed,
 count(case when g.products_redirected is not null then a.user_id end) as  redirected_to_partner_screen,
-count(case when h.user_id is not null and g.products_redirected is not null then a.user_id end) as in_partner_report
+count(case when (h.user_id is not null or p.user_id is not null) and g.products_redirected is not null then a.user_id end) as in_partner_report
  from  (select User_id, phone_number, final_source, final_partner, coupon_code,created_at from reporting_db.marketing_master 
  where created_at >= '2024-04-01 00:00:00' ) a
 -- otp and pan
@@ -83,6 +83,9 @@ group by 1) g
 on a.user_id = g.user_id
 left join (select distinct user_id from asp_playground.partnerstatus_user_id) h
 on a.user_id = h.user_id
+left join (select distinct user_id from asp_user_partnership) p
+on a.user_id = p.user_id
 group by 1,2
 ;
+
 
