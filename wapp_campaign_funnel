@@ -1,0 +1,46 @@
+select  w.phonenumber,
+w.filename as campaign_name,
+count(a.phone_number) as sent,
+count(distinct case when  w.phonenumber is not null and g.products_redirected is not null or g.products_viewed is not null then w.phonenumber end) as products_viewd,
+count(distinct case when  w.phonenumber is not null and g.products_redirected is not null then w.phonenumber end) as  redirected_to_partner_screen,
+count(distinct case when h.user_id is not null then a.user_id end) as in_partner_report
+ from  (select User_id, phone_number, final_source, final_partner, coupon_code,created_at from reporting_db.marketing_master ) a
+ -- where final_source = 'asp_mp' )a
+left join (select *,  RIGHT(mobilenumber,10) as phonenumber from asp_playground.mp_wapp_campaign) w
+on a.phone_number = w.phonenumber
+left join
+(SELECT user_id, 
+GROUP_CONCAT(
+case when activity = 'apply' then
+b.sub_offer_name  else NULL END ORDER BY b.sub_offer_name SEPARATOR ',') AS products_redirected,
+GROUP_CONCAT(
+case when activity <> 'apply' then
+b.sub_offer_name  else NULL END ORDER BY b.sub_offer_name SEPARATOR ',') AS products_viewed
+
+FROM (select * from user_offer_activity_details) a
+-- WHERE activity = 'apply') a
+left join 
+(select * from asp_playground.sub_offer_name) b
+on a.sub_offer_id = b.sub_offer_id
+group by 1) g
+on a.user_id = g.user_id
+left join (select * from  asp_user_partnership) h
+on a.user_id = h.user_id
+where w.phonenumber is not null and w.filename = 'fibe_26 SENT AUDIENCE.csv'
+group by 1
+;
+
+
+
+select distinct partner, external_status from asp_user_partnership where user_id  in 
+(select user_id from user where phone_number in 
+ (select RIGHT(mobilenumber,10) from asp_playground.mp_wapp_campaign) );
+
+select * from asp_user_partnership where external_status = 'KYC_PENDING';
+select distinct partner, internal_status, external_status from asp_user_partnership;
+select * from asp_user_partnership where partner = 'fibe' and internal_status = 'success' and external_status = 'suspended';
+ select distinct event from partners_lead_webhook;
+  select * from partners_lead_webhook;
+select * from asp_user_partnership where partner = 'fibe';
+desc asp_playground.mp_wapp_campaign;
+select filename, count(*), count(distinct mobilenumber) from asp_playground.mp_wapp_campaign group by 1;
