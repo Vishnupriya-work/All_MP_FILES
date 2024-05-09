@@ -1,3 +1,60 @@
+select year(user_created_at) as year,
+ month(user_created_at) as month, 
+ -- day(user_created_at) as day, 
+ case when agent_code = 'aspmpde' then 'default'
+when agent_code in ('harsh_goi','harsh_goi2') then 'ASPGI'
+when agent_code  in ('E2CF8E2HJV','834QWXK964','ASPMPTR','CJUVG5THGY','campaign1','BZDCBHYBDT','dsa_shubhra') then 'Wapp_campaign'
+when agent_code in ('reeng_iifl') then 'reeng'
+when agent_code in ('sangya01') then 'Sakhi_loans'
+when agent_code in ('aspire_fintech_pvt_ltd') then 'asp_fintech'
+when agent_code in ('JG0R3NKN2H','cvt7wc23mm','IG6UBRSYVQ',
+'LADQRK2KCR','0PWG87MUX5','QRWTPWQDTB','kak0gvgpfd','GDMRDMVMFB','R8KXVISS7X','UVLGPA5SH7','K1ALGSXHY3',
+'55xeotjnyd','VUA8MP6DWO','P9LYSGXSRB','sbisfoeddz','5bgdnu7cdv','SDDWHAJBSR','YICK2X7OIP','6PRMVHOTRV','DQACUSBP8A','VZ3LFWOX7Z','YWBWGZNZTS',
+'LLWJLGK18U','GA8X2I3PCJ','T6EYRBXBA6','BXMN4B5SFH','DSZPEKBD3S','WTGSWIVCAX','ZEZAOMBHLG','PPL8IDQY5S','OAV5GVR191',
+'UFRXKSQVZJ','RE85HPVPXS') then 'DSA' else null end as channel,
+count(mobile) as phone_entered, 
+count(case when status != 'USER_TOKEN_ISSUED' then status end) as "profile_details_for_bureau_added",
+ count(case when status IN ( 'USER_DISQUALIFIED', 'USER_DISQUALIFIED') then status end) as "consent_given", 
+-- count(case when status = 'USER_DISQUALIFIED' and firm_name is null then status end) as "BRE_1_disqualified",
+count(case when status = 'USER_QUALIFIED' or ( status = 'USER_DISQUALIFIED' and firm_name is not null) then status end) as "BRE_1_qualified",
+ count(case when firm_name is not null then firm_name end) as "business details added", 
+ count(case when bank_statement_status = "COMPLETED" then bank_statement_status end) as "banking details added", 
+ count(case when status = 'USER_DISQUALIFIED' and firm_name is not null and 
+ bank_statement_status = "COMPLETED" then bank_statement_status end) as "Post banking disqualified", 
+ count(case when firm_name is not null and bank_statement_status = "FAILED" then bank_statement_status end)
+ as "Reupload_bank_statement", 
+ count(case when loan_status is not null then loan_status end) as "In_loan_process",
+ count(case when loan_status not in ( "LOAN_REJECTED","KYC_REJECTED") then loan_status end) as "Approved_in_loan_process_and_KYC" ,
+     count(case when loan_status = "DISBURSED" then loan_status end) as "DISBURSED"
+ from asp_playground.mp_iifl_userstatus_1 where id in 
+(select max(id) from asp_playground.mp_iifl_userstatus_1 group by mobile) and
+ status <> "USER_EXPIRED"  group by 1,2,3 order by 1,2,3 desc; 
+
+select * from  asp_playground.mp_iifl_userstatus_1 where loan_status is not null;
+
+select * from asp_playground.mp_prefr_userstatus_1 where id in (select max(id) from asp_playground.mp_prefr_userstatus_1
+where disbursalamount is not null group by mobilenumber);
+-- where date(applicationdatedaily) >= '2024-04-01' and date(applicationdatedaily) < '2024-05-01' group by mobilenumber);
+
+desc asp_playground.mp_prefr_userstatus_1;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 select date(user_created_at) as User_created_time, count(mobile) as phone_entered,
 count(case when status != 'USER_TOKEN_ISSUED' then status end) as  "profile_details_for_bureau_added",
 count(case when status != 'USER_PROFILE_UPDATED'and bureau_last_updated_at is not null then status end) as  "consent_given",
