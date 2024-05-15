@@ -1,3 +1,54 @@
+-- with bre qualified add on 
+
+select year(user_created_at) as year,
+ month(user_created_at) as month, 
+ day(user_created_at) as day, 
+
+count(mobile) as phone_entered, 
+count(case when status != 'USER_TOKEN_ISSUED' then status end) as "profile_details_for_bureau_added",
+ count(case when status IN ( 'USER_DISQUALIFIED', 'USER_DISQUALIFIED') then status end) as "consent_given", 
+-- count(case when status = 'USER_DISQUALIFIED' and firm_name is null then status end) as "BRE_1_disqualified",
+count(case when status = 'USER_QUALIFIED' or ( status = 'USER_DISQUALIFIED' and firm_name is not null) then status end) as "BRE_1_qualified",
+ count(case when firm_name is not null then firm_name end) as "business details added", 
+ count(case when bank_statement_status = "COMPLETED" then bank_statement_status end) as "banking details added", 
+ count(case when status = 'USER_DISQUALIFIED' and firm_name is not null and 
+ bank_statement_status = "COMPLETED" then bank_statement_status end) as "Post banking disqualified", 
+ count(case when firm_name is not null and bank_statement_status = "FAILED" then bank_statement_status end)
+ as "Reupload_bank_statement", 
+ count(case when loan_status is not null then loan_status end) as "In_loan_process",
+ count(case when loan_status not in ( "LOAN_REJECTED","KYC_REJECTED") then loan_status end) as "Approved_in_loan_process_and_KYC" ,
+     count(case when loan_status = "DISBURSED" then loan_status end) as "DISBURSED"
+ from asp_playground.mp_iifl_userstatus_1 where id in 
+(select max(id) from asp_playground.mp_iifl_userstatus_1 group by mobile)
+and status <> "USER_EXPIRED"  group by 1,2,3 order by 1,2,3 desc; 
+
+select distinct status from  asp_playground.mp_iifl_userstatus_1;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 select year(user_created_at) as year,
  month(user_created_at) as month, 
  -- day(user_created_at) as day, 
