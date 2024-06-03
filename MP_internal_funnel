@@ -1,3 +1,100 @@
+- with weekly and second stage approval
+select 
+DATE_FORMAT(a.created_at, '%Y-%m-%d') as created_at,
+DATE_FORMAT(a.created_at, '%u') as week_number,
+coupon_code,
+count(a.phone_number) as phone_number_entered, 
+count(case when b.line_amount is not null then a.phone_number end) as added_desired_loan_amount,
+count(case when ac.fl_consent = 1 then a.user_id end) as bureau_consent_given,
+count(case when i1.user_id is not null then a.user_id end) as OTP_Triggered,
+count(case when i1.fl_verified = 1 and b.is_active = 1 then a.user_id end) as otp_triggered_and_verifed,
+count(case when   b.is_active = 1 and b.pannumber is not null then a.user_id end) as PAN_entered,
+count(case when   b.is_active = 1 and b.dob is not null then a.user_id end) as DOB_entered,
+count(case when   b.is_active = 1 and b.gender is not null then a.user_id end) as gender_entered,
+count(case when  q.language is not null then a.user_id end) as q1_language_entered,
+count(case when  q.occupation is not null then a.user_id end) as q2_occupation_entered,
+count(case when  q.income is not null then a.user_id end) as q3_income_entered,
+count(case when  q.itramount is not null then a.user_id end) as q4_itr_info_entered,
+count(case when   b.is_active = 1 and b.email is not null then a.user_id end) as email_entered,
+count(case when  ad.user_id is not null then a.user_id end) as  completed_address,
+count(case when  screen_status in (8,9) then a.user_id end) as users_Reached_decision_screen,
+count(case when  e.user_id is not null and screen_status = 8 then a.user_id end) as  users_Rejected,
+count(case when  e.user_id is not null and screen_status = 9 then a.user_id end) as  users_Approved_in_offer_screen,
+count(case when g.products_redirected is not null or g.products_sub_clicked is not null or g.products_viewed is not null then a.user_id end) as product_info_viewed,
+count(case when g.products_sub_clicked is not null or  g.products_redirected is not null then a.user_id end) as product_clicked,
+count(case when (g.products_sub_clicked is not null and json_extract(p.offer_details, '$.approved')  = 1 ) or  g.products_redirected is not null 
+  then a.user_id end) as stage_2_internal_approved,
+count(case when g.products_redirected is not null then a.user_id end) as  redirected_to_partner_screen,
+count(case when (h.mobilenumber is not null ) and g.products_redirected is not null then a.user_id end) as in_partner_report
+ from  (select User_id, phone_number, final_source, final_partner, coupon_code,created_at from reporting_db.marketing_master 
+ where created_at >= '2024-05-01 00:00:00') a
+-- otp and pan
+left join user b
+on a.user_id = b.id
+-- copon
+LEFT JOIN
+(SELECT user_id, fl_validated  from user_promotional_coupon_validation_logs where id in (SELECT max(id) from user_promotional_coupon_validation_logs group by user_id)) c
+on a.user_id = c.user_id
+-- bureau consent
+LEFT JOIN
+(SELECT user_id, consent_type, fl_consent from user_app_consent_master where id in (SELECT max(id) from user_app_consent_master 
+where consent_type = 'bureau'
+group by user_id)) ac
+on a.user_id = ac.user_id
+-- otp 
+LEFT JOIN
+(SELECT * from otp_api_partner_config where id in (SELECT max(id) from otp_api_partner_config where event = 'signup' group by user_id)) i1
+on a.user_id= i1.user_id
+-- questionnaire
+left join
+(SELECT user_id ,
+case when json_extract(questions_response, '$[0].question_response[0].options[0].field_text') is not null then
+json_unquote(json_extract(questions_response, '$[0].question_response[0].options[0].field_text')) else
+json_unquote(json_extract(questions_response, '$[0].options[0].option_text')) end as language,
+case when json_extract(questions_response, '$[1].question_response[0].options[0].field_text') is not null then
+json_unquote(json_extract(questions_response, '$[1].question_response[0].options[0].field_text')) else
+json_unquote(json_extract(questions_response, '$[1].options[0].option_text')) end as occupation,
+case when json_extract(questions_response, '$[2].question_response[0].options[0].field_text') is not null then
+json_unquote(json_extract(questions_response, '$[2].question_response[0].options[0].field_text')) else
+json_unquote(json_extract(questions_response, '$[2].options[0].option_text')) end as income,
+case when json_extract(questions_response, '$[3].question_response[0].options[0].field_text') is not null then
+json_unquote(json_extract(questions_response, '$[3].question_response[0].options[0].field_text')) else
+json_unquote(json_extract(questions_response, '$[3].options[0].option_text')) end as itramount
+from questionnaire_response where id in (SELECT max(id) from questionnaire_response group by user_id)) q
+on a.user_id= q.user_id
+-- address
+left join
+(SELECT user_id  from user_address where id in (SELECT max(id) from user_address group by user_id)) ad
+on a.user_id= ad.user_id
+-- decision screen
+LEFT JOIN
+(SELECT user_id, screen_status from userstatus_v2 where id in (SELECT max(id) from userstatus_v2 group by user_id)) e
+on a.user_id = e.user_id
+left join
+(SELECT user_id,
+GROUP_CONCAT(
+case when activity = 'apply' then
+b.sub_offer_name  else NULL END ORDER BY b.sub_offer_name SEPARATOR ',') AS products_redirected,
+GROUP_CONCAT(
+case when activity = 'view_sub' then
+b.sub_offer_name  else NULL END ORDER BY b.sub_offer_name SEPARATOR ',') AS products_sub_clicked,
+GROUP_CONCAT(
+case when activity = 'view_main' then
+b.sub_offer_name  else NULL END ORDER BY b.sub_offer_name SEPARATOR ',') AS products_viewed
+FROM (select * from user_offer_activity_details) a
+left join 
+(select * from asp_playground.sub_offer_name) b
+on a.sub_offer_id = b.sub_offer_id
+group by 1) g
+on a.user_id = g.user_id
+left join (select * from asp_playground.mp_prefr_userstatus_1) h
+on a.phone_number = h.mobilenumber
+left join (select * from asp_user_partnership) p
+on a.user_id = p.user_id
+group by 1,2
+;
+
+
 select 
 a.final_source, DATE_FORMAT(a.created_at, '%Y-%m') as created_at,
 count(a.phone_number) as phone_number_entered, 
