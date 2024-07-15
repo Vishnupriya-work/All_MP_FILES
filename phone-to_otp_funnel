@@ -1,0 +1,51 @@
+user_created_at	phone_entered	tnc_consent	wp_consent	bureau_consent	otp_triggered	otp_verified;
+
+select distinct consent_type from user_app_consent_master;
+
+bureau
+loan_agreement
+privacy_tnc
+whatsapp
+;
+
+select 
+DATE_FORMAT(a.created_at, '%Y-%m-%d') as created_at,
+count(a.phone_number) as phone_number_entered, 
+count(case when a1.fl_consent = 1 then a.user_id end) as tnc_consent_given,
+count(case when a2.fl_consent = 1 then a.user_id end) as wp_consent_given,
+count(case when a3.fl_consent = 1 then a.user_id end) as bureau_consent_given,
+count(case when i1.user_id is not null then a.user_id end) as OTP_Triggered,
+count(case when i1.fl_verified = 1 and b.is_active = 1 then a.user_id end) as otp_triggered_and_verifed
+from  (select User_id, phone_number, final_source, final_partner, coupon_code,created_at from reporting_db.marketing_master 
+ where created_at >= '2024-06-01 00:00:00') a
+-- otp and pan
+left join user b
+on a.user_id = b.id
+-- copon
+LEFT JOIN
+(SELECT user_id, fl_validated  from user_promotional_coupon_validation_logs where id in (SELECT max(id) from user_promotional_coupon_validation_logs group by user_id)) c
+on a.user_id = c.user_id
+-- bureau consent
+LEFT JOIN
+(SELECT user_id, consent_type, fl_consent from user_app_consent_master where id in (SELECT max(id) from user_app_consent_master 
+where consent_type = 'privacy_tnc'
+group by user_id)) a1
+on a.user_id = a1.user_id
+-- bureau consent
+LEFT JOIN
+(SELECT user_id, consent_type, fl_consent from user_app_consent_master where id in (SELECT max(id) from user_app_consent_master 
+where consent_type = 'whatsapp'
+group by user_id)) a2
+on a.user_id = a2.user_id
+-- bureau consent
+LEFT JOIN
+(SELECT user_id, consent_type, fl_consent from user_app_consent_master where id in (SELECT max(id) from user_app_consent_master 
+where consent_type = 'bureau'
+group by user_id)) a3
+on a.user_id = a3.user_id
+-- otp 
+LEFT JOIN
+(SELECT * from otp_api_partner_config where id in (SELECT max(id) from otp_api_partner_config where event = 'signup' group by user_id)) i1
+on a.user_id= i1.user_id
+where coupon_code not in ('redbus')
+group by 1;
